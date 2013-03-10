@@ -43,10 +43,9 @@ class Joph {
 		// execute parse
 		$pattern_str = trim($pattern_str);
 		if (!empty($pattern_str)) {
-			$arr = array(
-				'pattern' => $pattern_str,
-				'regexp'  => strtr($pattern_str, $this->_schema_map),
-			);
+			$arr = array(); // pattern, regexp, action
+			$arr['pattern'] = $pattern_str;
+			$arr['regexp']  = strtr($pattern_str, $this->_schema_map);
 			return $arr;
 		} else {
 			throw new Joph_Exception('fail to parse uri pattern');
@@ -67,7 +66,7 @@ class Joph {
 		
 		// execute parse
 		if (count($action_chain) > 0) {
-			$arr = array();
+			$arr = array(); // pattern, regexp, action
 			$arr['action'] = array();
 			foreach ($action_chain as $item) {
 				if (strpos('@', $item) === 0) { // #,@,%,*
