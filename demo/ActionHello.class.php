@@ -9,6 +9,6 @@ class ActionHello {
 	}
 	
 	public function execute() {
-		echo "Joph!";
+		echo "Joph!<br><br>";
 	}
 }

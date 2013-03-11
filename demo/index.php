@@ -14,6 +14,11 @@ try {
 	$joph = Joph_Framework::getInstance();
 	$joph->bind('/hello', array(
 		'ActionHello',
+		'ActionFooter',
+	));
+	$joph->bind('/hello/<name>', array(
+		'ActionHelloSome',
+		'ActionFooter',
 	));
 	$joph->shipout();
 } catch (Exception $e) {

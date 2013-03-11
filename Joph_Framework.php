@@ -1,5 +1,6 @@
 <?php
 class Joph_Framework {
+	const version = '1.0';
 	private static $joph = null;
 	private function __construct() {}
 	
