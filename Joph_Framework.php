@@ -159,7 +159,7 @@ class Joph {
 	public function shipout() {
 		$orbit = false;
 		foreach ($this->_bind_map as $arr) {
-			$regexp = '#^' . $arr['regexp'] . '$#';
+			$regexp = '#^' . $arr['regexp'] . '/?$#';
 			if (preg_match($regexp, $_SERVER['REQUEST_URI'], $schema)) {
 				$orbit = true;
 				Joph_Controller::parseClientRequest($schema);
