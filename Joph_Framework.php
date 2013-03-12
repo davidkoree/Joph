@@ -63,8 +63,7 @@ class Joph {
 	 * @param string $regexp_str
 	 * @throws Joph_Exception
 	 */
-	public function parseNamedSubPattern($regexp_str = '')
-	{
+	public function parseNamedSubPattern($regexp_str = '') {
 		// check method parameters
 		if (!is_string($regexp_str)) {
 			throw new Joph_Exception('regexp should be a string');
@@ -93,8 +92,7 @@ class Joph {
 	 * add index for each subpattern, index starts with zero
 	 * @param 
 	 */
-	private function addSubPatternIndex(&$item)
-	{
+	private function addSubPatternIndex(&$item) {
 		$item .= substr($item, -1) == '_' ? array_shift($this->_subpattern_idx) : '';
 	}
 	
