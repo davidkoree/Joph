@@ -1,6 +1,6 @@
 <?php
 
-class ActionHelloSome extends ActionHello {
+class ActionCalendarCompare {
 	protected $_schema = array();
 	public function __construct() {
 		Joph_Controller::initAction(__CLASS__);
@@ -19,6 +19,7 @@ class ActionHelloSome extends ActionHello {
 	}
 	
 	public function execute() {
-		echo $this->_schema['name'][0] . "!<br><br>";
+		$str = sprintf("Compare %s and %s<br><br>", $this->_schema['date'][0], $this->_schema['date'][1]);
+		echo $str;
 	}
 }

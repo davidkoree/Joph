@@ -20,10 +20,13 @@ try {
 		'ActionHelloSome',
 		'ActionFooter',
 	));
+	$joph->bind('/calendar/<date>/compare/<date>', array(
+		'ActionCalendarCompare',
+		'ActionFooter',
+	));
 	$joph->shipout();
 } catch (Exception $e) {
-	echo '['
-	. pathinfo($e->getFile(), PATHINFO_FILENAME) . ':'
-	. $e->getLine() . ']' 
-	. ' Exception: ' . $e->getMessage();
+	$str = sprintf('[%s:%s]Exception: %s', 
+	    pathinfo($e->getFile(), PATHINFO_FILENAME), $e->getLine(), $e->getMessage());
+	echo $str;
 }

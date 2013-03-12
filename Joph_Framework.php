@@ -25,6 +25,7 @@ class Joph {
 		'<day>'			=> '(?P<day>\d{2})',
 		'<yyyymmdd>'	=> '(?P<yyyymmdd>\d{8})',
 	);
+	private $_subpattern_idx = array();
 	
 	/**
 	 * parse uri pattern into explicit regular expression
@@ -35,6 +36,7 @@ class Joph {
 		# sample: '/bookstore/view/<id>'
 		# sample: '/calendar/<date>'
 		# sample: '/calendar/mark'
+		# sample: '/calendar/<date>/compare/<date>'
 		
 		// check method parameters
 		if (!is_string($pattern_str)) {
@@ -46,12 +48,54 @@ class Joph {
 		if (!empty($pattern_str)) {
 			$arr = array(); // pattern, regexp, action
 			$arr['pattern'] = $pattern_str;
-			$arr['regexp']  = strtr($pattern_str, $this->_schema_map);
+			$regexp_str = strtr($pattern_str, $this->_schema_map);
+			$regexp_str = $this->parseNamedSubPattern($regexp_str);
+			$arr['regexp'] = $regexp_str;
 			return $arr;
 		} else {
 			throw new Joph_Exception('fail to parse uri pattern');
 		}
 		
+	}
+	
+	/**
+	 * parse subpatterns that have same schema name in regular expression 
+	 * @param string $regexp_str
+	 * @throws Joph_Exception
+	 */
+	public function parseNamedSubPattern($regexp_str = '')
+	{
+		// check method parameters
+		if (!is_string($regexp_str)) {
+			throw new Joph_Exception('regexp should be a string');
+		}
+		
+		//execute parse
+		$str = preg_replace('#\(\?P(<[^>]+)#', '\0__[]', $regexp_str, -1, $count);
+		
+		if ($count == 0) return $regexp_str;
+		
+		$this->_subpattern_idx = range(0, $count - 1);
+		$arr = explode('_[]', $str);
+		$result = array_walk($arr, array($this, 'addSubPatternIndex'));
+		
+		if (false == $result) {
+			throw new Joph_Exception('error occurs when parsing subpatterns');
+		}
+		
+		$this->_subpattern_idx = array();
+		$str = implode('', $arr);
+		
+		return $str;
+	}
+	
+	/**
+	 * add index for each subpattern, index starts with zero
+	 * @param 
+	 */
+	private function addSubPatternIndex(&$item)
+	{
+		$item .= substr($item, -1) == '_' ? array_shift($this->_subpattern_idx) : '';
 	}
 	
 	/**
