@@ -17,13 +17,13 @@ class Joph {
 	protected $_tag_map = array();
 	protected $_bind_map = array();
 	protected $_schema_map = array(
-		'<id>'			=> '(?P<id>\d+)',
-		'<name>'		=> '(?P<name>\w+)',
-		'<date>'		=> '(?P<date>\d{8})',
-		'<year>'		=> '(?P<year>\d{4})',
-		'<month>'		=> '(?P<month>\d{2})',
-		'<day>'			=> '(?P<day>\d{2})',
-		'<yyyymmdd>'	=> '(?P<yyyymmdd>\d{8})',
+		'<id>'          => '(?P<id>\d+)',
+		'<name>'        => '(?P<name>\w+)',
+		'<date>'        => '(?P<date>\d{8})',
+		'<year>'        => '(?P<year>\d{4})',
+		'<month>'       => '(?P<month>\d{2})',
+		'<day>'         => '(?P<day>\d{2})',
+		'<yyyymmdd>'    => '(?P<yyyymmdd>\d{8})',
 	);
 	private $_subpattern_idx = array();
 	
@@ -200,9 +200,12 @@ class Joph {
 	
 	public function shipout() {
 		$orbit = false;
+		$query_pos = strpos($_SERVER['REQUEST_URI'], '?');
+		$_SERVER['REQUEST_PATH'] = (false === $query_pos) ? 
+			$_SERVER['REQUEST_URI'] : substr($_SERVER['REQUEST_URI'], 0, $query_pos);
 		foreach ($this->_bind_map as $arr) {
 			$regexp = '#^' . $arr['regexp'] . '/?$#';
-			if (preg_match($regexp, $_SERVER['REQUEST_URI'], $schema)) {
+			if (preg_match($regexp, $_SERVER['REQUEST_PATH'], $schema)) {
 				$orbit = true;
 				Joph_Controller::parseClientRequest($schema);
 				//TODO processing in every single action
