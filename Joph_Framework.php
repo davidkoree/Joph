@@ -115,7 +115,7 @@ class Joph {
 				if (strpos('@', $item) === 0) { // #,@,%,*
 					// process a bundle of tagged actions
 					$actions = $this->getActionsByTag($item);
-					if (count($actions) > 0){
+					if (count($actions) > 0) {
 						$arr['action'] = array_merge((array)$arr['action'], (array)$actions);
 					}
 				} else {
@@ -232,6 +232,7 @@ class Joph {
 
 class Joph_Controller {
 	protected static $_field_value = array();
+	protected static $_schema_count = array();
 	
 	/**
 	 * call each subaction's initial methods 
@@ -262,12 +263,24 @@ class Joph_Controller {
 			// ignore numeric keys
 			if (is_string($key)) {
 				$arr[$key] = $value;
+				$len = strpos($key, '_');
+				if ($len > 0) {
+					$keyname = substr($key, 0, $len);
+					self::$_schema_count[$keyname]++;
+				}
 			}
 		}
 		self::$_field_value['schema'] = $arr;
 		
 		self::$_field_value['post'] = $_POST;
 		self::$_field_value['get'] = $_GET;
+	}
+	
+	/**
+	 * get real schema name(without numeric key) and corresponding count
+	 */
+	public function getSchemaCount() {
+		return self::$_schema_count;
 	}
 	
 	/**
