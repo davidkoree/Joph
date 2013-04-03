@@ -1,6 +1,6 @@
 <?php
 class Joph_Framework {
-	const version = '1.0';
+	const VERSION = '1.0';
 	private static $joph = null;
 	private function __construct() {}
 	
@@ -266,6 +266,9 @@ class Joph_Controller {
 				$len = strpos($key, '_');
 				if ($len > 0) {
 					$keyname = substr($key, 0, $len);
+					if (!isset(self::$_schema_count[$keyname])) {
+						self::$_schema_count[$keyname] = 0;
+					}
 					self::$_schema_count[$keyname]++;
 				}
 			}

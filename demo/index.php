@@ -1,5 +1,6 @@
 <?php
 
+error_reporting(E_ALL);
 define('ACTION_PATH', dirname(__FILE__));
 set_include_path(get_include_path() . PATH_SEPARATOR . ACTION_PATH);
 function __autoload($class) {
