@@ -333,4 +333,26 @@ class Joph_Controller {
 	}
 }
 
+class Joph_Action {
+
+	//TODO
+	//DRAFT
+
+	//->break() complete without any further Actions (such as footer output)
+	//self::$_switch_break = On/Off should also support?
+	//->forward(mixed URI/action chains) go ahead to execute another special action(s)
+	//->sweep(mixed URI/action chains) inspired by 'front crawl', in other words, call another action(s) and then continue
+
+	//self::onFinished() more logical stuff is round here (e.g. break or forward in case)
+
+	// FLOW SAMPLES:
+	// URI ( action1 > action2 > action3(break here) -> *action4 ... )
+	// URI ( action1 > action2 > action3(forward to action3 '/some/other/uri/') -> *action4 ... )
+	// URI ( action1 > action2 > action4(sweep to action4 '/some/other/uri/') -> action3 ... )
+	// Note: action prefix with * should not been executed
+
+	//Response::redirect (if it does really exist) is not included in this DRAFT, it's stuff of Response
+
+}
+
 class Joph_Exception extends Exception {}
