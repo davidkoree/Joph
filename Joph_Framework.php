@@ -208,18 +208,10 @@ class Joph {
 			if (preg_match($regexp, $_SERVER['REQUEST_PATH'], $schema)) {
 				$orbit = true;
 				Joph_Controller::parseClientRequest($schema);
-				//TODO processing in every single action
-				foreach ($arr['action'] as $item) {
-					if (!class_exists($item)) {
-						throw new Joph_Exception('action class ' . $item . ' not exist');
-					}
-					$action = new $item(); // initialize action
-					$result = $action->execute();
-					if (false === $result) {
-						throw new Joph_Exception('fail to execute action ' . $item);
-					}
-				}
-				
+				Joph_Controller::setActions($arr['action']);
+				do {
+					Joph_Controller::runAction();
+				} while (Joph_Controller::hasUnexecutedAction());
 				break;
 			}
 		}
@@ -231,20 +223,62 @@ class Joph {
 }
 
 class Joph_Controller {
-	protected static $_field_value = array();
+	protected static $_field_value  = array();
 	protected static $_schema_count = array();
+	protected static $_action_stack = array();
+	protected static $_action_count = 0;
+	protected static $_action_idx   = 0;
+	
+	public static function getActions() {
+		return self::$_action_stack;
+	}
+	
+	public static function setActions($arr = array()) {
+		self::$_action_stack = (array)$arr;
+		self::$_action_count = count($arr);
+	}
+	
+	public static function setActionIndex($idx) {
+		self::$_action_idx = $idx;
+	}
+	
+	public static function getCurrentAction() {
+		$idx = self::$_action_idx;
+		return isset(self::$_action_stack[$idx]) ?
+		    array('action' => self::$_action_stack[$idx], 'idx' => $idx) : null;
+	}
+	
+	public static function hasUnexecutedAction() {
+		return (self::$_action_count > self::$_action_idx);
+	}
 	
 	/**
 	 * call each subaction's initial methods 
-	 * @param string $class
+	 * @param string $object
 	 */
-	public function initAction($class) {		
-		$methods = (array)get_class_methods($class);
+	public static function initAction($object) {		
+		$methods = (array)get_class_methods($object);
 		foreach ($methods as $method) {
 			if (strpos($method, 'init') === 0) {
-				call_user_func("$class::$method");
+				call_user_func(array($object, $method));
 			}
 		}
+	}
+	
+	public static function runAction() {
+		$item = Joph_Controller::getCurrentAction();
+		if (false == $item) { //maybe NULL
+			return false;
+		}
+		$sub_action = $item['action'];
+		$idx = $item['idx'];
+		if (!class_exists($sub_action)) {
+			throw new Joph_Exception('action class ' . $sub_action . ' not exist');
+		}
+		$action = new $sub_action(); // initialize action
+		$action->execute();
+		Joph_Controller::setActionIndex(++$idx);
+		return true;
 	}
 	
 	/**
@@ -282,7 +316,7 @@ class Joph_Controller {
 	/**
 	 * get real schema name(without numeric key) and corresponding count
 	 */
-	public function getSchemaCount() {
+	public static function getSchemaCount() {
 		return self::$_schema_count;
 	}
 	
@@ -290,7 +324,7 @@ class Joph_Controller {
 	 * fetch Schema values
 	 * @param string $key
 	 */
-	public function getSchema($key = '') {
+	public static function getSchema($key = '') {
 		return self::getFieldValue(__METHOD__, (string)$key);
 	}
 	
@@ -298,7 +332,7 @@ class Joph_Controller {
 	 * fetch POST values
 	 * @param string $key
 	 */
-	public function getPost($key = '') {
+	public static function getPost($key = '') {
 		return self::getFieldValue(__METHOD__, (string)$key);
 	}
 	
@@ -306,7 +340,7 @@ class Joph_Controller {
 	 * fetch GET values
 	 * @param string $key
 	 */
-	public function getQuery($key = '') {
+	public static function getQuery($key = '') {
 		return self::getFieldValue(__METHOD__, (string)$key);
 	}
 	
@@ -322,6 +356,7 @@ class Joph_Controller {
 		}
 		$field_name = str_replace('get', '', $method_name);
 		$field_name = strtolower($field_name);
+		if ('query' == $field_name) $field_name = 'get';
 		if (isset(self::$_field_value[$field_name])) {
 			if ('' == trim($key)) {
 				return self::$_field_value[$field_name];
@@ -335,13 +370,12 @@ class Joph_Controller {
 
 class Joph_Action {
 
-	//TODO
-	//DRAFT
+	//TODO DRAFT
 
-	//->break() complete without any further Actions (such as footer output)
+	//->halt() complete without any further Actions (such as footer output)
 	//self::$_switch_break = On/Off should also support?
-	//->forward(mixed URI/action chains) go ahead to execute another special action(s)
-	//->sweep(mixed URI/action chains) inspired by 'front crawl', in other words, call another action(s) and then continue
+	//->forward(mixed URI/action chains/action tag) go ahead to execute another special action(s)
+	//->sweep(mixed URI/action chains/action tag) inspired by 'front crawl', in other words, call another action(s) and then continue
 
 	//self::onFinished() more logical stuff is round here (e.g. break or forward in case)
 
@@ -353,6 +387,85 @@ class Joph_Action {
 
 	//Response::redirect (if it does really exist) is not included in this DRAFT, it's stuff of Response
 
+	protected $_schema = array();
+	protected $_get    = array();
+	protected $_post   = array();
+	
+	public function __construct() {
+		Joph_Controller::initAction($this);
+	}
+	
+	/**
+	 * build schema data
+	 */
+	public function initSchema() {
+		$schema = array();
+		$tmp = Joph_Controller::getSchema();
+		$schema_count = Joph_Controller::getSchemaCount();
+		foreach ($tmp as $key => $value) {
+			if (strpos($key, '_') > 0) {
+				$key = preg_replace('/_\d+$/', '', $key);
+				if (1 === $schema_count[$key]) {
+					$schema[$key] = $value;
+				} else {
+					$schema[$key][] = $value;
+				}
+			}
+		}
+		$this->_schema = $schema;
+	}
+	
+	public function initQuery() {
+		$this->_get = Joph_Controller::getQuery();
+	}
+	
+	public function initPost() {
+		$this->_post = Joph_Controller::getPost();
+	}
+	
+	public function halt() {
+		$actions = Joph_Controller::getActions();
+		$sub_action = get_called_class();
+		$idx = array_search($sub_action, $actions);
+		if ($idx !== NULL && $idx !== false && intval($idx) >= 0) {
+			$actions = array_slice($actions, 0, $idx);
+			Joph_Controller::setActions($actions);
+			Joph_Controller::setActionIndex(++$idx);
+			return true;
+		} else {
+			throw new Joph_Exception("can not halt action '$sub_action'");
+		}
+	}
+	
+	public function forward($action) {
+		//TODO mixed support
+		$actions = Joph_Controller::getActions();
+		$sub_action = get_called_class();
+		$idx = array_search($sub_action, $actions);
+		if ($idx !== NULL && $idx !== false && intval($idx) >= 0) {
+			array_splice($actions, $idx + 1, count($actions), $action);
+			Joph_Controller::setActions($actions);
+			Joph_Controller::setActionIndex(++$idx);
+			return true;
+		} else {
+			throw new Joph_Exception("can not forward action '$action'");
+		}
+	}
+	
+	public function sweep($action) {
+		//TODO mixed support
+		$actions = Joph_Controller::getActions();
+		$sub_action = get_called_class();
+		$idx = array_search($sub_action, $actions);
+		if ($idx !== NULL && $idx !== false && intval($idx) >= 0) {
+			array_splice($actions, $idx + 1, 0, $action);
+			Joph_Controller::setActions($actions);
+			Joph_Controller::setActionIndex(++$idx);
+			return true;
+		} else {
+			throw new Joph_Exception("can not sweep action '$action'");
+		}
+	}
 }
 
 class Joph_Exception extends Exception {}

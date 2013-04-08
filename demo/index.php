@@ -25,6 +25,56 @@ try {
 		'ActionCalendarCompare',
 		'ActionFooter',
 	));
+	$joph->bind('/action/chain', array(
+		'ActionChain1',
+		'ActionChain2',
+		'ActionChain3',
+	));
+	$joph->bind('/action/halt/head', array(
+		'ActionHaltHere',
+		'ActionChain1',
+		'ActionChain2',
+	));
+	$joph->bind('/action/halt/middle', array(
+		'ActionChain1',
+		'ActionHaltHere',
+		'ActionChain2',
+	));
+	$joph->bind('/action/halt/tail', array(
+		'ActionChain1',
+		'ActionChain2',
+		'ActionHaltHere',
+	));
+	$joph->bind('/action/sweep/head', array(
+		'ActionSweepHere',
+		'ActionChain1',
+		'ActionChain2',
+	));
+	$joph->bind('/action/sweep/middle', array(
+		'ActionChain1',
+		'ActionSweepHere',
+		'ActionChain2',
+	));
+	$joph->bind('/action/sweep/tail', array(
+		'ActionChain1',
+		'ActionChain2',
+		'ActionSweepHere',
+	));
+	$joph->bind('/action/forward/head', array(
+		'ActionForwardHere',
+		'ActionChain1',
+		'ActionChain2',
+	));
+	$joph->bind('/action/forward/middle', array(
+		'ActionChain1',
+		'ActionForwardHere',
+		'ActionChain2',
+	));
+	$joph->bind('/action/forward/tail', array(
+		'ActionChain1',
+		'ActionChain2',
+		'ActionForwardHere',
+	));
 	$joph->shipout();
 } catch (Exception $e) {
 	$str = sprintf('[%s:%s]Exception: %s', 

@@ -1,10 +1,10 @@
 <?php
-class ActionHello {
+class ActionHello extends Joph_Action {
 	public function __construct() {
-		Joph_Controller::initAction(__CLASS__);
+		Joph_Controller::initAction($this);
 	}
 	
-	public function init() {
+	public function initHello() {
 		echo "Hello, ";
 	}
 	
