@@ -8,6 +8,6 @@ class ActionHaltHere extends Joph_Action {
 		} else {
 			echo "[".$item['idx']."] ".$item['action']."<br><br>";
 		}
-		$this->halt('ActionHalt');
+		$this->halt();
 	}
 }

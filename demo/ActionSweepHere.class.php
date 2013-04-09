@@ -8,6 +8,9 @@ class ActionSweepHere extends Joph_Action {
 		} else {
 			echo "[".$item['idx']."] ".$item['action']."<br><br>";
 		}
+	}
+	
+	public function onFinished() {
 		$this->sweep('ActionSweep');
 	}
 }
