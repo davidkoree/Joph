@@ -85,6 +85,10 @@ try {
 		'ActionNormForward',
 		'ActionNorm',
 	));
+	$joph->bind('/action/uri/tatoo', array(
+		'ActionNormUri',
+		'ActionNorm',
+	));
 	
 	$joph->shipout();
 } catch (Exception $e) {

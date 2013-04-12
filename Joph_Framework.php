@@ -157,8 +157,10 @@ class Joph {
 		if (!empty($uri)) {
 			foreach ($this->_bind_map as $arr) {
 				$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
-				if (preg_match($regexp, $uri)) {
-					return $this->_bind_map['action'];
+				if (preg_match($regexp, $uri, $schema)) {
+					//TODO parseInternalRequest()
+					Joph_Controller::parseClientRequest($schema);
+					return $arr['action'];
 					break;
 				}
 			}
