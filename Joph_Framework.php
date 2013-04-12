@@ -112,7 +112,7 @@ class Joph {
 			$arr = array(); // pattern, regexp, action
 			$arr['action'] = array();
 			foreach ($action_chain as $item) {
-				if (strpos('@', $item) === 0) { // #,@,%,*
+				if (0 === strpos('@', $item)) {
 					// process a bundle of tagged actions
 					$actions = $this->getActionsByTag($item);
 					if (count($actions) > 0) {
@@ -144,6 +144,28 @@ class Joph {
 			return $this->_tag_map[$tag_name];
 		}
 		return array();
+	}
+	
+	/**
+	 * 
+	 * @param string $uri
+	 * @return array
+	 */
+	public function getActionsByURI($uri) {
+		$uri = trim($uri);
+		$uri = rtrim($uri, '/');
+		if (!empty($uri)) {
+			foreach ($this->_bind_map as $arr) {
+				$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
+				if (preg_match($regexp, $uri)) {
+					return $this->_bind_map['action'];
+					break;
+				}
+			}
+			return array();
+		} else {
+			throw new Joph_Exception('URI is empty, get no action');
+		}
 	}
 	
 	/**
@@ -182,6 +204,9 @@ class Joph {
 		// check method paramters
 		if (!is_string($pattern_str)) {
 			throw new Joph_Exception('pattern should be a string');
+		}
+		if ('/' !== substr($pattern_str, 0, 1)) {
+			throw new Joph_Exception('pattern should starts with slash');
 		}
 		if (!is_array($action_chain)) {
 			throw new Joph_Exception('action chain should be an array');
@@ -260,10 +285,68 @@ class Joph_Controller {
 	public static function initAction($object) {
 		$methods = (array)get_class_methods($object);
 		foreach ($methods as $method) {
-			if (strpos($method, 'init') === 0) {
+			if (0 === strpos($method, 'init')) {
 				call_user_func(array($object, $method));
 			}
 		}
+	}
+	
+	public static function resetActionChain($method_name, $current, $next = '') {
+		//TODO mixed support ($next=URI/action tag)
+		$next = self::convertActionChain($next);
+		if (strpos($method_name, '::') !== false) {
+			list(, $method_name) = explode('::', $method_name, 2);
+		}
+		$actions = self::getActions();
+		$idx = array_search($current, $actions);
+		if ($idx !== NULL && $idx !== false && intval($idx) >= 0) {
+			switch ($method_name) {
+				case 'halt':
+					$actions = array_slice($actions, 0, $idx);
+					break;
+				case 'sweep':
+					if (empty($next)) {
+						throw new Joph_Exception('fail to convert action chain');
+					}
+					array_splice($actions, $idx + 1, 0, $next);
+					break;
+				case 'forward':
+					if (empty($next)) {
+						throw new Joph_Exception('fail to convert action chain');
+					}
+					array_splice($actions, $idx + 1, count($actions), $next);
+					break;
+				default:
+					throw new Joph_Exception("unknown action method '$method_name'");
+					break;
+			}
+			self::setActions($actions);
+			self::setActionIndex(++$idx);
+			return true;
+		} else {
+			throw new Joph_Exception("can not $method_name action '$next'");
+		}
+	}
+	
+	public static function convertActionChain($entity) {
+		$prefix = substr($entity, 0, 1);
+		switch ($prefix) {
+			case '/': // URI
+				$joph = Joph_Framework::getInstance();
+				$action = $joph->getActionsByURI($entity);
+				break;
+			case '@': // tag
+				$joph = Joph_Framework::getInstance();
+				$action = $joph->getActionsByTag($entity);
+				break;
+			case 'A': // Action Name
+				$action = $entity;
+				break;
+			default:
+				$action = array();
+				break;
+		}
+		return $action;
 	}
 	
 	public static function runAction() {
@@ -290,7 +373,7 @@ class Joph_Controller {
 	 */
 	public static function parseClientRequest($schema = array()) {
 		// check method parameters
-		if (count($schema) === 0) {
+		if (0 === count($schema)) {
 			throw new Joph_Exception('field name should be a string');
 		}
 			
@@ -376,15 +459,15 @@ class Joph_Action {
 
 	//->halt() complete without any further Actions (such as footer output)
 	//self::$_switch_break = On/Off should also support?
-	//->forward(mixed URI/action chains/action tag) go ahead to execute another special action(s)
-	//->sweep(mixed URI/action chains/action tag) inspired by 'front crawl', in other words, call another action(s) and then continue
+	//->forward(mixed URI/action tag) go ahead to execute another special action(s)
+	//->sweep(mixed URI/action tag) inspired by 'front crawl', in other words, call another action(s) and then continue
 
 	//self::onFinished() more logical stuff is round here (e.g. halt, sweep or forward in case)
 
 	// FLOW SAMPLES:
 	// URI ( action1 > action2 > action3(break here) -> *action4 ... )
-	// URI ( action1 > action2 > action3(forward to action3 '/some/other/uri/') -> *action4 ... )
-	// URI ( action1 > action2 > action4(sweep to action4 '/some/other/uri/') -> action3 ... )
+	// URI ( action1 > action2 > action3(forward to action3 '/some/other/uri/|@action_tag') -> *action4 ... )
+	// URI ( action1 > action2 > action4(sweep to action4 '/some/other/uri/|@action_tag') -> action3 ... )
 	// Note: action prefix with * should not been executed
 
 	//Response::redirect (if it does really exist) is not included in this DRAFT, it's stuff of Response
@@ -435,49 +518,17 @@ class Joph_Action {
 	
 	public function halt() {
 		$sub_action = get_called_class();
-		$this->resetActionChain(__METHOD__, $sub_action);
+		Joph_Controller::resetActionChain(__METHOD__, $sub_action);
 	}
 	
 	public function forward($action) {
 		$sub_action = get_called_class();
-		$this->resetActionChain(__METHOD__, $sub_action, $action);
+		Joph_Controller::resetActionChain(__METHOD__, $sub_action, $action);
 	}
 	
 	public function sweep($action) {
 		$sub_action = get_called_class();
-		$this->resetActionChain(__METHOD__, $sub_action, $action);
-	}
-	
-	protected function resetActionChain($method_name, $current, $next = '') {
-		//TODO mixed support ($next=URI/action chains/action tag)
-		if (strpos($method_name, '::') !== false) {
-			list(, $method_name) = explode('::', $method_name, 2);
-		}
-		$actions = Joph_Controller::getActions();
-		$idx = array_search($current, $actions);
-		if ($idx !== NULL && $idx !== false && intval($idx) >= 0) {
-			switch ($method_name) {
-				case 'halt':
-					$actions = array_slice($actions, 0, $idx);
-					break;
-				case 'sweep':
-					array_splice($actions, $idx + 1, 0, $next);
-					break;
-				case 'forward':
-					//TODO forwarding actions can be set as protected with bind method
-					//e.g. $joph->bind('/internal/api', 'Actions', 'protected');
-					array_splice($actions, $idx + 1, count($actions), $next);
-					break;
-				default:
-					throw new Joph_Exception("unknown action method '$method_name'");
-					break;
-			}
-			Joph_Controller::setActions($actions);
-			Joph_Controller::setActionIndex(++$idx);
-			return true;
-		} else {
-			throw new Joph_Exception("can not $method_name action '$next'");
-		}
+		Joph_Controller::resetActionChain(__METHOD__, $sub_action, $action);
 	}
 }
 

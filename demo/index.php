@@ -75,6 +75,17 @@ try {
 		'ActionChain2',
 		'ActionForwardHere',
 	));
+	
+	$joph->tag('@tag1', array('ActionTatoo', 'ActionShow'));
+	$joph->bind('/action/sweep/tatoo', array(
+		'ActionNormSweep',
+		'ActionNorm',
+	));
+	$joph->bind('/action/forward/tatoo', array(
+		'ActionNormForward',
+		'ActionNorm',
+	));
+	
 	$joph->shipout();
 } catch (Exception $e) {
 	$str = sprintf('[%s:%s]Exception: %s', 
