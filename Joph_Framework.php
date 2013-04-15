@@ -158,9 +158,8 @@ class Joph {
 			foreach ($this->_bind_map as $arr) {
 				$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
 				if (preg_match($regexp, $uri, $schema)) {
-					//TODO parseInternalRequest()
-					Joph_Controller::parseClientRequest($schema);
-					return $arr['action'];
+					$action_arr = Joph_Controller::parseInternalAction($arr['action'], $schema);
+					return $action_arr;
 					break;
 				}
 			}
@@ -184,6 +183,7 @@ class Joph {
 		if (!is_array($action_arr)) {
 			throw new Joph_Exception('action queue should be an array');
 		}
+		//TODO validate action arr, only 'ActionName' is allowed
 		
 		// execute tag
 		if (!empty($tag_name) && count($action_arr) > 0) {
@@ -358,13 +358,18 @@ class Joph_Controller {
 		}
 		$sub_action = $item['action'];
 		$idx = $item['idx'];
-		if (!class_exists($sub_action)) {
+		if (is_string($sub_action) && !class_exists($sub_action)) {
 			throw new Joph_Exception('action class ' . $sub_action . ' not exist');
 		}
-		$action = new $sub_action(); // initialize action
-		$action->execute();
-		Joph_Controller::setActionIndex(++$idx);
-		$action->onFinished();
+		if (is_string($sub_action)) {
+			$action = new $sub_action(); // initialize action
+			$action->execute();
+			Joph_Controller::setActionIndex(++$idx);
+			$action->onFinished();
+		} elseif ($sub_action instanceof Joph_Action_Internal) {
+			$sub_action->execute();
+			Joph_Controller::setActionIndex(++$idx);
+		}
 		return true;
 	}
 	
@@ -398,6 +403,35 @@ class Joph_Controller {
 		
 		self::$_field_value['post'] = $_POST;
 		self::$_field_value['get'] = $_GET;
+	}
+	
+	public static function parseInternalAction($actions = array(), $schema = array()) {
+		// check method parameters
+		if (0 === count($schema)) {
+			throw new Joph_Exception('field name should be a string');
+		}
+		$schema_arr = array();
+		foreach ($schema as $key => $value) {
+			$len = strpos($key, '_');
+			if ($len > 0) {
+				$keyname = substr($key, 0, $len);
+				$schema_arr[$keyname][] = $value;
+			}
+		}
+		$action_arr = array();
+		foreach ($actions as $sub_action) {
+			if (!class_exists($sub_action)) {
+				throw new Joph_Exception('action class ' . $sub_action . ' not exist');
+			}
+			$action = new $sub_action();
+			if (!is_a($action, 'Joph_Action_Internal')) {
+				throw new Joph_Exception('action class' . $action . ' is not property');
+			}
+			$action->setSchema($schema_arr);
+			$action_arr[] = $action;
+		}
+		//TODO prettify structure of single-dimension array
+		return $action_arr;
 	}
 	
 	/**
@@ -531,6 +565,24 @@ class Joph_Action {
 	public function sweep($action) {
 		$sub_action = get_called_class();
 		Joph_Controller::resetActionChain(__METHOD__, $sub_action, $action);
+	}
+}
+
+class Joph_Action_Internal {
+	protected $_schema = array();
+	protected $_get    = array();
+	protected $_post   = array();
+	
+	public function __construct() {
+		$this->_get  = $_GET;
+		$this->_post = $_POST;
+	}
+	
+	/**
+	 * build schema data
+	 */
+	public function setSchema($schema) {
+		$this->_schema = $schema;
 	}
 }
 

@@ -89,6 +89,13 @@ try {
 		'ActionNormUri',
 		'ActionNorm',
 	));
+
+	$joph->bind('/action/schema/<name>', array(
+		'ActionSchema',
+	));
+	$joph->bind('/action/schema/forward/<name>/<name>', array(
+		'ActionForwardInternal',
+	));
 	
 	$joph->shipout();
 } catch (Exception $e) {
