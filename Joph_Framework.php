@@ -294,7 +294,6 @@ class Joph_Controller {
 	}
 	
 	public static function resetActionChain($method_name, $current, $next = '') {
-		//TODO mixed support ($next=URI/action tag)
 		$next = self::convertActionChain($next);
 		if (strpos($method_name, '::') !== false) {
 			list(, $method_name) = explode('::', $method_name, 2);
