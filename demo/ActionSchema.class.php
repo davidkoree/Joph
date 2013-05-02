@@ -13,6 +13,13 @@ class ActionSchema extends Joph_Action {
 	}
 
 	public function onFinished() {
-		$this->forward('/action/schema/forward/name2/name3');
+		switch ($this->_schema['name']) {
+			case 'single':
+				$this->forward('/action/single/name1');
+				break;
+			default:
+				$this->forward('/action/schema/forward/name2/name3');
+				break;
+		}
 	}
 }

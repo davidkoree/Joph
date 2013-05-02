@@ -410,11 +410,20 @@ class Joph_Controller {
 			throw new Joph_Exception('field name should be a string');
 		}
 		$schema_arr = array();
+		$schema_count = array();
 		foreach ($schema as $key => $value) {
 			$len = strpos($key, '_');
 			if ($len > 0) {
 				$keyname = substr($key, 0, $len);
 				$schema_arr[$keyname][] = $value;
+				if (isset($schema_count[$keyname])) $schema_count[$keyname]++;
+				else $schema_count[$keyname] = 1;
+			}
+		}
+		foreach ($schema_arr as $keyname => $value) {
+			if (1 === $schema_count[$keyname]) {
+				unset($schema_arr[$keyname]);
+				$schema_arr[$keyname] = $value[0];
 			}
 		}
 		$action_arr = array();
@@ -429,7 +438,6 @@ class Joph_Controller {
 			$action->setSchema($schema_arr);
 			$action_arr[] = $action;
 		}
-		//TODO prettify structure of single-dimension array
 		return $action_arr;
 	}
 	

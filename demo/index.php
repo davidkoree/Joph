@@ -96,6 +96,9 @@ try {
 	$joph->bind('/action/schema/forward/<name>/<name>', array(
 		'ActionForwardInternal',
 	));
+	$joph->bind('/action/single/<name>', array(
+		'ActionSingleInternal',
+	));
 	
 	$joph->shipout();
 } catch (Exception $e) {
