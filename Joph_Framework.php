@@ -185,15 +185,53 @@ class Joph {
 		if (!empty($uri)) {
 			foreach ($this->_bind_map as $arr) {
 				$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
-				if (preg_match($regexp, $uri, $schema)) {
-					$action_arr = Joph_Controller::parseInternalAction($arr['action'], $schema);
-					return $action_arr;
+				if (preg_match($regexp, $uri)) {
+					return $arr['action'];
 					break;
 				}
 			}
 			return array();
 		} else {
 			throw new Joph_Exception('URI is empty, get no action');
+		}
+	}
+	
+	/**
+	 * 
+	 * @param string $uri
+	 * @return array
+	 */
+	public function getSchemasByURI($uri) {
+		$uri = trim($uri);
+		$uri = rtrim($uri, '/');
+		if (!empty($uri)) {
+			foreach ($this->_bind_map as $arr) {
+				$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
+				if (preg_match($regexp, $uri, $schema)) {
+					$schema_arr = array();
+					$schema_count = array();
+					foreach ($schema as $key => $value) {
+						$len = strpos($key, '_');
+						if ($len > 0) {
+							$keyname = substr($key, 0, $len);
+							$schema_arr[$keyname][] = $value;
+							if (isset($schema_count[$keyname])) $schema_count[$keyname]++;
+							else $schema_count[$keyname] = 1;
+						}
+					}
+					foreach ($schema_arr as $keyname => $value) {
+						if (1 === $schema_count[$keyname]) {
+							unset($schema_arr[$keyname]);
+							$schema_arr[$keyname] = $value[0];
+						}
+					}
+					return $schema_arr;
+					break;
+				}
+			}
+			return array();
+		} else {
+			throw new Joph_Exception('URI is empty, get no schema');
 		}
 	}
 	
@@ -321,8 +359,30 @@ class Joph_Controller {
 		}
 	}
 	
-	public static function resetActionChain($method_name, $current, $next = '') {
-		$next = self::convertActionChain($next);
+	public static function resetActionChain($method_name, $current, $macro = '') {
+		$sub_actions = self::convertActionChain($macro);
+		if ('/' === substr($macro, 0, 1)) {
+			$joph = Joph_Framework::getInstance();
+			$schema = $joph->getSchemasByURI($macro);
+			$action_arr = array();
+			foreach ($sub_actions as $sub_action) {
+				if (!class_exists($sub_action)) {
+					throw new Joph_Exception('action class ' . $sub_action . ' not exist');
+				}
+				if (is_subclass_of($sub_action, 'Joph_Action_Internal')) {
+					$action = new $sub_action();
+					$action->setSchema($schema);
+					$action_arr[] = $action;
+				} elseif (is_subclass_of($sub_action, 'Joph_Action')) {
+					$action_arr[] = $sub_action;
+					//TODO reset top level schema values?
+				} else {
+					throw new Joph_Exception('action class ' . $sub_action . ' is not property');
+				}
+			}
+			$sub_actions = $action_arr;
+		}
+		
 		if (strpos($method_name, '::') !== false) {
 			list(, $method_name) = explode('::', $method_name, 2);
 		}
@@ -334,26 +394,26 @@ class Joph_Controller {
 					$actions = array_slice($actions, 0, $idx);
 					break;
 				case 'sweep':
-					if (empty($next)) {
+					if (empty($sub_actions)) {
 						throw new Joph_Exception('fail to convert action chain');
 					}
-					array_splice($actions, $idx + 1, 0, $next);
+					array_splice($actions, $idx + 1, 0, $sub_actions);
 					break;
 				case 'forward':
-					if (empty($next)) {
+					if (empty($sub_actions)) {
 						throw new Joph_Exception('fail to convert action chain');
 					}
-					array_splice($actions, $idx + 1, count($actions), $next);
+					array_splice($actions, $idx + 1, count($actions), $sub_actions);
 					break;
 				default:
-					throw new Joph_Exception("unknown action method '$method_name'");
+					throw new Joph_Exception('unknown action method ' . $method_name);
 					break;
 			}
 			self::setActions($actions);
 			self::setActionIndex(++$idx);
 			return true;
 		} else {
-			throw new Joph_Exception("can not $method_name action '$next'");
+			throw new Joph_Exception('can not ' . $method_name . ' action ' . $sub_actions);
 		}
 	}
 	
@@ -369,7 +429,7 @@ class Joph_Controller {
 				$action = $joph->getActionsByTag($entity);
 				break;
 			case 'A': // Action Name
-				$action = $entity;
+				$action = array($entity);
 				break;
 			default:
 				$action = array();
@@ -388,7 +448,7 @@ class Joph_Controller {
 		if (is_string($sub_action) && !class_exists($sub_action)) {
 			throw new Joph_Exception('action class ' . $sub_action . ' not exist');
 		}
-		if (is_string($sub_action)) {
+		if (is_string($sub_action) && is_subclass_of($sub_action, 'Joph_Action')) {
 			$action = new $sub_action(); // initialize action
 			$action->execute();
 			Joph_Controller::setActionIndex(++$idx);
@@ -396,6 +456,8 @@ class Joph_Controller {
 		} elseif ($sub_action instanceof Joph_Action_Internal) {
 			$sub_action->execute();
 			Joph_Controller::setActionIndex(++$idx);
+		} else {
+			throw new Joph_Exception('incorrect action class ' . $sub_action);
 		}
 		return true;
 	}
@@ -406,11 +468,6 @@ class Joph_Controller {
 	 * @throws Joph_Exception
 	 */
 	public static function parseClientRequest($schema = array()) {
-		// check method parameters
-		if (0 === count($schema)) {
-			throw new Joph_Exception('field name should be a string');
-		}
-			
 		$arr = array();
 		foreach ($schema as $key => $value) {
 			// ignore numeric keys
@@ -430,44 +487,6 @@ class Joph_Controller {
 		
 		self::$_field_value['post'] = $_POST;
 		self::$_field_value['get'] = $_GET;
-	}
-	
-	public static function parseInternalAction($actions = array(), $schema = array()) {
-		// check method parameters
-		if (0 === count($schema)) {
-			throw new Joph_Exception('field name should be a string');
-		}
-		$schema_arr = array();
-		$schema_count = array();
-		foreach ($schema as $key => $value) {
-			$len = strpos($key, '_');
-			if ($len > 0) {
-				$keyname = substr($key, 0, $len);
-				$schema_arr[$keyname][] = $value;
-				if (isset($schema_count[$keyname])) $schema_count[$keyname]++;
-				else $schema_count[$keyname] = 1;
-			}
-		}
-		foreach ($schema_arr as $keyname => $value) {
-			if (1 === $schema_count[$keyname]) {
-				unset($schema_arr[$keyname]);
-				$schema_arr[$keyname] = $value[0];
-			}
-		}
-		$action_arr = array();
-		foreach ($actions as $sub_action) {
-			if (!class_exists($sub_action)) {
-				throw new Joph_Exception('action class ' . $sub_action . ' not exist');
-			}
-			$action = new $sub_action();
-			if (!is_a($action, 'Joph_Action_Internal')) {
-				throw new Joph_Exception('action class' . $action . ' is not property');
-			}
-			$action->setSchema($schema_arr);
-			$action_arr[] = $action;
-		}
-		//TODO prettify structure of single-dimension array
-		return $action_arr;
 	}
 	
 	/**
@@ -593,14 +612,14 @@ class Joph_Action {
 		Joph_Controller::resetActionChain(__METHOD__, $sub_action);
 	}
 	
-	public function forward($action) {
+	public function forward($macro) {
 		$sub_action = get_called_class();
-		Joph_Controller::resetActionChain(__METHOD__, $sub_action, $action);
+		Joph_Controller::resetActionChain(__METHOD__, $sub_action, $macro);
 	}
 	
-	public function sweep($action) {
+	public function sweep($macro) {
 		$sub_action = get_called_class();
-		Joph_Controller::resetActionChain(__METHOD__, $sub_action, $action);
+		Joph_Controller::resetActionChain(__METHOD__, $sub_action, $macro);
 	}
 }
 
