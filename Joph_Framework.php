@@ -5,8 +5,7 @@ class Joph_Framework {
 	private function __construct() {}
 	
 	public static function getInstance() {
-		if (!(self::$joph instanceof Joph))
-		{
+		if (!(self::$joph instanceof Joph)) {
 			self::$joph = new Joph();
 		}
 		return self::$joph;
@@ -487,7 +486,6 @@ class Joph_Controller {
 }
 
 class Joph_Action {
-
 	protected $_schema = array();
 	protected $_get    = array();
 	protected $_post   = array();
