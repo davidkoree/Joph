@@ -13,6 +13,17 @@ require_once 'Joph_Framework.php';
 
 try {
 	$joph = Joph_Framework::getInstance();
+
+	//TODO add support on user-defined schemas
+	$joph->addSchema('<title>', '[a-zA-Z_-]+');
+	$joph->addSchema(array(
+		'<Mon>' => 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dev',
+		'<Day>' => 'Sun|Mon|Tue|Wed|Thu|Fri|Sat',
+	));
+	$joph->bind('/article/<title>/date/<year>/<Mon>-<Day>', array(
+		'ActionArticle',
+	));
+
 	$joph->bind('/hello', array(
 		'ActionHello',
 		'ActionFooter',
@@ -99,7 +110,7 @@ try {
 	$joph->bind('/action/single/<name>', array(
 		'ActionSingleInternal',
 	));
-	
+
 	$joph->shipout();
 } catch (Exception $e) {
 	$str = sprintf('[%s:%s]Exception: %s', 

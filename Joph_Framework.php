@@ -26,6 +26,34 @@ class Joph {
 		'<yyyymmdd>'    => '(?P<yyyymmdd>\d{8})',
 	);
 	private $_subpattern_idx = array();
+
+	/**
+	 * add user-defined schema and corresponding regexp
+	 * @param mixed
+	 * @throws Joph_Exception
+	 */
+	public function addSchema() {
+		$argnum = func_num_args();
+		switch ($argnum) {
+			case 1:
+				$arr = func_get_arg(0);
+				if (!is_array($arr) || empty($arr)) {
+					throw new Joph_Exception('fail to add schema, argument is empty');
+				}
+				break;
+			case 2:
+				$arr[func_get_arg(0)] = func_get_arg(1);
+				break;
+			default:
+				throw new Joph_Exception('fail to add schema, argument is incorrect');
+		}
+		foreach ($arr as $schema => $regexp) {
+			if (empty($schema) || empty($regexp)) {
+				throw new Joph_Exception('fail to add schema, argument is empty string');
+			}
+			$this->_schema_map[$schema] = "(?P{$schema}{$regexp})";
+		}
+	}
 	
 	/**
 	 * parse uri pattern into explicit regular expression
@@ -438,6 +466,7 @@ class Joph_Controller {
 			$action->setSchema($schema_arr);
 			$action_arr[] = $action;
 		}
+		//TODO prettify structure of single-dimension array
 		return $action_arr;
 	}
 	
