@@ -17,7 +17,7 @@ try {
 	//TODO add support on user-defined schemas
 	$joph->addSchema('<title>', '[a-zA-Z_-]+');
 	$joph->addSchema(array(
-		'<Mon>' => 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dev',
+		'<Mon>' => 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec',
 		'<Day>' => 'Sun|Mon|Tue|Wed|Thu|Fri|Sat',
 	));
 	$joph->bind('/article/<title>/date/<year>/<Mon>-<Day>', array(
@@ -105,6 +105,7 @@ try {
 		'ActionSchema',
 	));
 	$joph->bind('/action/schema/forward/<name>/<name>', array(
+	//$joph->bind('/action/schema/forward/name', array(
 		'ActionForwardInternal',
 	));
 	$joph->bind('/action/single/<name>', array(

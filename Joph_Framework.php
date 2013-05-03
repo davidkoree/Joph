@@ -61,29 +61,15 @@ class Joph {
 	 * @throws Joph_Exception
 	 */
 	public function parseUriPattern($pattern_str = '') {
-		# sample: '/bookstore/view/<id>'
-		# sample: '/calendar/<date>'
-		# sample: '/calendar/mark'
-		# sample: '/calendar/<date>/compare/<date>'
-		
-		// check method parameters
-		if (!is_string($pattern_str)) {
+		if (!is_string($pattern_str) || '' == trim($pattern_str)) {
 			throw new Joph_Exception('pattern should be a string');
 		}
-		
-		// execute parse
-		$pattern_str = trim($pattern_str);
-		if (!empty($pattern_str)) {
-			$arr = array(); // pattern, regexp, action
-			$arr['pattern'] = $pattern_str;
-			$regexp_str = strtr($pattern_str, $this->_schema_map);
-			$regexp_str = $this->parseNamedSubPattern($regexp_str);
-			$arr['regexp'] = $regexp_str;
-			return $arr;
-		} else {
-			throw new Joph_Exception('fail to parse uri pattern');
-		}
-		
+		$arr = array(); // pattern, regexp, action
+		$arr['pattern'] = $pattern_str;
+		$regexp_str = strtr($pattern_str, $this->_schema_map);
+		$regexp_str = $this->parseNamedSubPattern($regexp_str);
+		$arr['regexp'] = $regexp_str;
+		return $arr;
 	}
 	
 	/**
@@ -92,24 +78,19 @@ class Joph {
 	 * @throws Joph_Exception
 	 */
 	public function parseNamedSubPattern($regexp_str = '') {
-		// check method parameters
-		if (!is_string($regexp_str)) {
+		if (!is_string($regexp_str) || '' == trim($regexp_str)) {
 			throw new Joph_Exception('regexp should be a string');
 		}
-		
-		//execute parse
 		$str = preg_replace('#\(\?P(<[^>]+)#', '\0__[]', $regexp_str, -1, $count);
-		
-		if ($count == 0) return $regexp_str;
-		
+		if (0 == $count) {
+			return $regexp_str;
+		}
 		$this->_subpattern_idx = range(0, $count - 1);
 		$arr = explode('_[]', $str);
 		$result = array_walk($arr, array($this, 'addSubPatternIndex'));
-		
 		if (false == $result) {
 			throw new Joph_Exception('error occurs when parsing subpatterns');
 		}
-		
 		$this->_subpattern_idx = array();
 		$str = implode('', $arr);
 		
@@ -130,109 +111,93 @@ class Joph {
 	 * @throws Joph_Exception
 	 */
 	public function parseActionChain($action_chain = array()) {
-		// check method parameters
-		if (!is_array($action_chain)) {
+		if (!is_array($action_chain) || empty($action_chain)) {
 			throw new Joph_Exception('action chain should be an array');
 		}
-		
-		// execute parse
-		if (count($action_chain) > 0) {
-			$arr = array(); // pattern, regexp, action
-			$arr['action'] = array();
-			foreach ($action_chain as $item) {
-				if (0 === strpos('@', $item)) {
-					// process a bundle of tagged actions
-					$actions = $this->getActionsByTag($item);
-					if (count($actions) > 0) {
-						$arr['action'] = array_merge((array)$arr['action'], (array)$actions);
-					}
-				} else {
-					// push normal action
-					$arr['action'][] = $item;
+		$arr = array(); // pattern, regexp, action
+		$arr['action'] = array();
+		foreach ($action_chain as $item) {
+			if (0 === strpos('@', $item)) {
+				$actions = $this->getActionsByTag($item);
+				if (count($actions) > 0) {
+					$arr['action'] = array_merge((array)$arr['action'], (array)$actions);
 				}
+			} else {
+				$arr['action'][] = $item;
 			}
-			foreach ($arr['action'] as $item) {
-				if (!file_exists(ACTION_PATH . '/' . $item . '.class.php')) {
-					throw new Joph_Exception('action ' . $item . ' does not exist');
-				}
-			}
-			return $arr;
-		} else {
-			throw new Joph_Exception('fail to parse action chain');
 		}
+		foreach ($arr['action'] as $item) {
+			if (!file_exists(ACTION_PATH . '/' . $item . '.class.php')) {
+				throw new Joph_Exception('action ' . $item . ' does not exist');
+			}
+		}
+		return $arr;
 	}
 	
 	/**
-	 * 
 	 * @param string $tag_name
 	 * @return array
 	 */
 	public function getActionsByTag($tag_name) {
-		if (isset($this->_tag_map[$tag_name])) {
-			return $this->_tag_map[$tag_name];
-		}
-		return array();
+		return isset($this->_tag_map[$tag_name]) ? $this->_tag_map[$tag_name] : array();
 	}
 	
 	/**
-	 * 
 	 * @param string $uri
 	 * @return array
 	 */
 	public function getActionsByURI($uri) {
 		$uri = trim($uri);
 		$uri = rtrim($uri, '/');
-		if (!empty($uri)) {
-			foreach ($this->_bind_map as $arr) {
-				$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
-				if (preg_match($regexp, $uri)) {
-					return $arr['action'];
-					break;
-				}
-			}
-			return array();
-		} else {
+		if (empty($uri)) {
 			throw new Joph_Exception('URI is empty, get no action');
 		}
+		foreach ($this->_bind_map as $arr) {
+			$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
+			if (preg_match($regexp, $uri)) {
+				return $arr['action'];
+				break;
+			}
+		}
+		return array();
 	}
 	
 	/**
-	 * 
 	 * @param string $uri
 	 * @return array
 	 */
 	public function getSchemasByURI($uri) {
 		$uri = trim($uri);
 		$uri = rtrim($uri, '/');
-		if (!empty($uri)) {
-			foreach ($this->_bind_map as $arr) {
-				$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
-				if (preg_match($regexp, $uri, $schema)) {
-					$schema_arr = array();
-					$schema_count = array();
-					foreach ($schema as $key => $value) {
-						$len = strpos($key, '_');
-						if ($len > 0) {
-							$keyname = substr($key, 0, $len);
-							$schema_arr[$keyname][] = $value;
-							if (isset($schema_count[$keyname])) $schema_count[$keyname]++;
-							else $schema_count[$keyname] = 1;
-						}
-					}
-					foreach ($schema_arr as $keyname => $value) {
-						if (1 === $schema_count[$keyname]) {
-							unset($schema_arr[$keyname]);
-							$schema_arr[$keyname] = $value[0];
-						}
-					}
-					return $schema_arr;
-					break;
-				}
-			}
-			return array();
-		} else {
+		if (empty($uri)) {
 			throw new Joph_Exception('URI is empty, get no schema');
 		}
+		foreach ($this->_bind_map as $arr) {
+			$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
+			if (preg_match($regexp, $uri, $schema)) {
+				$schema_arr = array();
+				$schema_count = array();
+				foreach ($schema as $key => $value) {
+					// ignore numeric keys
+					if (is_string($key)) {
+						$len = strpos($key, '_');
+						$keyname = substr($key, 0, $len);
+						$schema_arr[$keyname][] = $value;
+						if (isset($schema_count[$keyname])) $schema_count[$keyname]++;
+						else $schema_count[$keyname] = 1;
+					}
+				}
+				foreach ($schema_arr as $keyname => $value) {
+					if (1 === $schema_count[$keyname]) {
+						unset($schema_arr[$keyname]);
+						$schema_arr[$keyname] = $value[0];
+					}
+				}
+				return $schema_arr;
+				break;
+			}
+		}
+		return array();
 	}
 	
 	/**
@@ -242,53 +207,35 @@ class Joph {
 	 * @throws Joph_Exception
 	 */
 	public function tag($tag_name = '', $action_arr = array()) {
-		// check method parameters
-		if (!is_string($tag_name)) {
+		if (!is_string($tag_name) || '' == trim($tag_name)) {
 			throw new Joph_Exception('tag name should be a string');
 		}
-		if (!is_array($action_arr)) {
+		if (!is_array($action_arr) || empty($action_arr)) {
 			throw new Joph_Exception('action queue should be an array');
 		}
 		//TODO validate action arr, only 'ActionName' is allowed
-		
-		// execute tag
-		if (!empty($tag_name) && count($action_arr) > 0) {
-			if (trim($tag_name) == '') {
-				throw new Joph_Exception('tag name is empty');
-			}
-			$this->_tag_map[$tag_name] = $action_arr;
-		} else {
-			throw new Joph_Exception('fail to create tag for actions');
-		}
+		$this->_tag_map[$tag_name] = $action_arr;
 	}
 	
 	/**
-	 * 
 	 * @param string $pattern_str
 	 * @param array $action_chain
 	 * @throws Joph_Exception
 	 */
 	public function bind($pattern_str = '', $action_chain = array()) {
-		// check method paramters
-		if (!is_string($pattern_str)) {
+		if (!is_string($pattern_str) || '' == trim($pattern_str)) {
 			throw new Joph_Exception('pattern should be a string');
+		}
+		if (!is_array($action_chain) || empty($action_chain)) {
+			throw new Joph_Exception('action chain should be an array');
 		}
 		if ('/' !== substr($pattern_str, 0, 1)) {
 			throw new Joph_Exception('pattern should starts with slash');
 		}
-		if (!is_array($action_chain)) {
-			throw new Joph_Exception('action chain should be an array');
-		}
-		
-		// execute bind
-		if (!empty($pattern_str) && count($action_chain) > 0) {
-			$uri = $this->parseUriPattern($pattern_str);
-			$act = $this->parseActionChain($action_chain);
-			$map = array_merge((array)$uri, (array)$act);
-			$this->_bind_map[] = $map;
-		} else {
-			throw new Joph_Exception('fail to bind pattern and actions');
-		}
+		$uri = $this->parseUriPattern($pattern_str);
+		$act = $this->parseActionChain($action_chain);
+		$map = array_merge((array)$uri, (array)$act);
+		$this->_bind_map[] = $map;
 	}
 	
 	public function shipout() {
@@ -318,7 +265,6 @@ class Joph {
 
 class Joph_Controller {
 	protected static $_field_value  = array();
-	protected static $_schema_count = array();
 	protected static $_action_stack = array();
 	protected static $_action_count = 0;
 	protected static $_action_idx   = 0;
@@ -468,32 +414,28 @@ class Joph_Controller {
 	 * @throws Joph_Exception
 	 */
 	public static function parseClientRequest($schema = array()) {
-		$arr = array();
+		$schema_arr = array();
+		$schema_count = array();
 		foreach ($schema as $key => $value) {
 			// ignore numeric keys
 			if (is_string($key)) {
-				$arr[$key] = $value;
 				$len = strpos($key, '_');
-				if ($len > 0) {
-					$keyname = substr($key, 0, $len);
-					if (!isset(self::$_schema_count[$keyname])) {
-						self::$_schema_count[$keyname] = 0;
-					}
-					self::$_schema_count[$keyname]++;
-				}
+				$keyname = substr($key, 0, $len);
+				$schema_arr[$keyname][] = $value;
+				if (isset($schema_count[$keyname])) $schema_count[$keyname]++;
+				else $schema_count[$keyname] = 1;
 			}
 		}
-		self::$_field_value['schema'] = $arr;
+		foreach ($schema_arr as $keyname => $value) {
+			if (1 === $schema_count[$keyname]) {
+				unset($schema_arr[$keyname]);
+				$schema_arr[$keyname] = $value[0];
+			}
+		}
+		self::$_field_value['schema'] = $schema_arr;
 		
 		self::$_field_value['post'] = $_POST;
 		self::$_field_value['get'] = $_GET;
-	}
-	
-	/**
-	 * get real schema name(without numeric key) and corresponding count
-	 */
-	public static function getSchemaCount() {
-		return self::$_schema_count;
 	}
 	
 	/**
@@ -546,25 +488,6 @@ class Joph_Controller {
 
 class Joph_Action {
 
-	//TODO DRAFT
-
-	//->halt() complete without any further Actions (such as footer output)
-	//self::$_switch_break = On/Off should also support?
-	//->forward(mixed URI/action tag) go ahead to execute another special action(s)
-	//->sweep(mixed URI/action tag) inspired by 'front crawl', in other words, call another action(s) and then continue
-
-	//self::onFinished() more logical stuff is round here (e.g. halt, sweep or forward in case)
-
-	// FLOW SAMPLES:
-	// URI ( action1 > action2 > action3(break here) -> *action4 ... )
-	// URI ( action1 > action2 > action3(forward to action3 '/some/other/uri/|@action_tag') -> *action4 ... )
-	// URI ( action1 > action2 > action4(sweep to action4 '/some/other/uri/|@action_tag') -> action3 ... )
-	// Note: action prefix with * should not been executed
-
-	//Response::redirect (if it does really exist) is not included in this DRAFT, it's stuff of Response
-	
-	//->setVar($name, $value) and ->getVar($name) support? vars can be access within actions
-
 	protected $_schema = array();
 	protected $_get    = array();
 	protected $_post   = array();
@@ -583,20 +506,7 @@ class Joph_Action {
 	 * build schema data
 	 */
 	public function initSchema() {
-		$schema = array();
-		$tmp = Joph_Controller::getSchema();
-		$schema_count = Joph_Controller::getSchemaCount();
-		foreach ($tmp as $key => $value) {
-			if (strpos($key, '_') > 0) {
-				$key = preg_replace('/_\d+$/', '', $key);
-				if (1 === $schema_count[$key]) {
-					$schema[$key] = $value;
-				} else {
-					$schema[$key][] = $value;
-				}
-			}
-		}
-		$this->_schema = $schema;
+		$this->_schema = Joph_Controller::getSchema();
 	}
 	
 	public function initQuery() {

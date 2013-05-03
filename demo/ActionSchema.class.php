@@ -9,7 +9,6 @@ class ActionSchema extends Joph_Action {
 			echo "[".$item['idx']."] ".$item['action']."<br><br>";
 		}
 		var_dump($this->_schema);
-		var_dump(Joph_Controller::getSchemaCount());
 	}
 
 	public function onFinished() {
@@ -19,6 +18,7 @@ class ActionSchema extends Joph_Action {
 				break;
 			default:
 				$this->forward('/action/schema/forward/name2/name3');
+				//$this->forward('/action/schema/forward/name');
 				break;
 		}
 	}

@@ -9,6 +9,5 @@ class ActionSingleInternal extends Joph_Action_Internal {
 			echo "[".$item['idx']."] ".var_export($item['action'], true)."<br><br>";
 		}
 		var_dump($this->_schema);
-		var_dump(Joph_Controller::getSchemaCount());
 	}
 }
