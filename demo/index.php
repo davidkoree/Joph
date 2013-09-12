@@ -3,6 +3,8 @@
 error_reporting(E_ALL);
 define('ACTION_PATH', dirname(__FILE__));
 set_include_path(get_include_path() . PATH_SEPARATOR . ACTION_PATH);
+//TODO use spl_autoload_register instead
+//TODO Joph_Config as main dynamic smart wrapper
 function __autoload($class) {
 	if (0 === strpos($class, 'Action')) {
 		require_once ACTION_PATH . '/' . $class . '.class.php';
