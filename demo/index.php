@@ -15,6 +15,8 @@ require_once 'Joph_Framework.php';
 
 try {
 	$joph = Joph_Framework::getInstance();
+	$config = new Joph_Config();
+	$config->set('action_path', ACTION_PATH);
 
 	//TODO add support on user-defined schemas
 	$joph->addSchema('<title>', '[a-zA-Z_-]+');

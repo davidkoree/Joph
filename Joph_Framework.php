@@ -552,16 +552,24 @@ class Joph_Action_Internal {
 class Joph_Exception extends Exception {}
 
 class Joph_Config {
-	protected $_config = array();
+	private $_config = array();
 
 	public function __construct($items) {
 		foreach ($items as $key => $value) {
 			$this->_config[$key] = $value;
+			$this->__regist_autoload($key);
+		}
+	}
+
+	private function __regist_autoload($key) {
+		if (strcmp($key, 'action_path') === 0) {
+			spl_autoload_register(array($this, 'autoload'));
 		}
 	}
 
 	public function set($key, $value) {
 		$this->_config[$key] = $value;
+		$this->__regist_autoload($key);
 	}
 
 	public function __get($key) {
@@ -569,5 +577,16 @@ class Joph_Config {
 			return $this->_config[$key];
 		}
 		return null;
+	}
+
+	public function __set($key, $name) {
+		throw Exception('Setting properties directly on Joph_Config is not allowed');
+	}
+
+	public function autoload($class) {
+		if (0 === strpos($class, 'Action')) {
+			$path = $this->_config['action_path'];
+			require_once $path . '/' . $class . '.class.php';
+		}
 	}
 }
