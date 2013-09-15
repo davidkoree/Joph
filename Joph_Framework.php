@@ -550,3 +550,24 @@ class Joph_Action_Internal {
 }
 
 class Joph_Exception extends Exception {}
+
+class Joph_Config {
+	protected $_config = array();
+
+	public function __construct($items) {
+		foreach ($items as $key => $value) {
+			$this->_config[$key] = $value;
+		}
+	}
+
+	public function set($key, $value) {
+		$this->_config[$key] = $value;
+	}
+
+	public function __get($key) {
+		if (array_key_exists($this->_config, $key)) {
+			return $this->_config[$key];
+		}
+		return null;
+	}
+}
