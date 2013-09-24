@@ -1,22 +1,20 @@
 <?php
 
 error_reporting(E_ALL);
+//TODO make another path
 define('ACTION_PATH', dirname(__FILE__));
-set_include_path(get_include_path() . PATH_SEPARATOR . ACTION_PATH);
 //TODO use spl_autoload_register instead
 //TODO Joph_Config as main dynamic smart wrapper
-function __autoload($class) {
-	if (0 === strpos($class, 'Action')) {
-		require_once ACTION_PATH . '/' . $class . '.class.php';
-	}
-}
 
 require_once 'Joph_Framework.php';
 
 try {
 	$joph = Joph_Framework::getInstance();
 	$config = new Joph_Config();
-	$config->set('action_path', ACTION_PATH);
+	$config->setAutoload(
+		array('action' => ACTION_PATH)
+	);
+	$config->registAutoload();
 
 	//TODO add support on user-defined schemas
 	$joph->addSchema('<title>', '[a-zA-Z_-]+');

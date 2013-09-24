@@ -552,41 +552,42 @@ class Joph_Action_Internal {
 class Joph_Exception extends Exception {}
 
 class Joph_Config {
-	private $_config = array();
+	private $__config = array();
+	private $__reserved = array();
 
-	public function __construct($items) {
-		foreach ($items as $key => $value) {
-			$this->_config[$key] = $value;
-			$this->__regist_autoload($key);
+	public function setAutoload($pathes = array()) {
+		foreach ($pathes as $prefix => $path) {
+			$prefix = ucfirst(strtolower($prefix));
+			$this->__reserved[$prefix] = $path;
 		}
 	}
 
-	private function __regist_autoload($key) {
-		if (strcmp($key, 'action_path') === 0) {
-			spl_autoload_register(array($this, 'autoload'));
+	public function registAutoload() {
+		spl_autoload_register(array($this, 'autoload'));
+	}
+
+	//TODO private(?)
+	public function autoload($class) {
+		$regex = '/(' . implode('|', array_keys($this->__reserved)) . ')/';
+		if (preg_match($regex, $class, $matches)) {
+			$prefix = $matches[1];
+			$path = $this->__reserved[$prefix];
+			require_once $path . '/' . $class . '.class.php';
 		}
 	}
 
 	public function set($key, $value) {
-		$this->_config[$key] = $value;
-		$this->__regist_autoload($key);
+		$this->__config[$key] = $value;
 	}
 
 	public function __get($key) {
-		if (array_key_exists($this->_config, $key)) {
-			return $this->_config[$key];
+		if (array_key_exists($this->__config, $key)) {
+			return $this->__config[$key];
 		}
 		return null;
 	}
 
 	public function __set($key, $name) {
 		throw Exception('Setting properties directly on Joph_Config is not allowed');
-	}
-
-	public function autoload($class) {
-		if (0 === strpos($class, 'Action')) {
-			$path = $this->_config['action_path'];
-			require_once $path . '/' . $class . '.class.php';
-		}
 	}
 }
