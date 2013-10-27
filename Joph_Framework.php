@@ -467,7 +467,7 @@ class Joph_Controller {
 	 * @param string $key
 	 * @return multitype:|NULL
 	 */
-	protected function getFieldValue($method_name = '', $key = '') {
+	protected static function getFieldValue($method_name = '', $key = '') {
 		if (strpos($method_name, '::') !== false) {
 			list(, $method_name) = explode('::', $method_name, 2);
 		}
@@ -566,7 +566,6 @@ class Joph_Config {
 		spl_autoload_register(array($this, 'autoload'));
 	}
 
-	//TODO private(?)
 	public function autoload($class) {
 		$regex = '/(' . implode('|', array_keys($this->__reserved)) . ')/';
 		if (preg_match($regex, $class, $matches)) {
