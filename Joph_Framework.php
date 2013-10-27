@@ -587,6 +587,6 @@ class Joph_Config {
 	}
 
 	public function __set($key, $name) {
-		throw Exception('Setting properties directly on Joph_Config is not allowed');
+		throw new Exception('Setting properties directly on Joph_Config is not allowed');
 	}
 }
