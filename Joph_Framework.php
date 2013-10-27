@@ -566,7 +566,7 @@ class Joph_Config {
 		spl_autoload_register(array($this, 'autoload'));
 	}
 
-	public function autoload($class) {
+	private function autoload($class) {
 		$regex = '/(' . implode('|', array_keys($this->__reserved)) . ')/';
 		if (preg_match($regex, $class, $matches)) {
 			$prefix = $matches[1];
