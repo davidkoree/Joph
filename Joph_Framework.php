@@ -116,7 +116,7 @@ class Joph {
 		$arr = array(); // pattern, regexp, action
 		$arr['action'] = array();
 		foreach ($action_chain as $item) {
-			if (0 === strpos('@', $item)) {
+			if (0 === strpos($item, '@')) {
 				$actions = $this->getActionsByTag($item);
 				if (count($actions) > 0) {
 					$arr['action'] = array_merge((array)$arr['action'], (array)$actions);
