@@ -152,6 +152,10 @@ class Joph {
 		if (empty($uri)) {
 			throw new Joph_Exception('URI is empty, get no action');
 		}
+		if (isset($this->_bind_static[$uri])) {
+			$arr = $this->_bind_static[$uri];
+			return $arr['action'];
+		}
 		foreach ($this->_bind_map as $arr) {
 			$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
 			if (preg_match($regexp, $uri)) {
@@ -171,6 +175,9 @@ class Joph {
 		$uri = rtrim($uri, '/');
 		if (empty($uri)) {
 			throw new Joph_Exception('URI is empty, get no schema');
+		}
+		if (isset($this->_bind_static[$uri])) {
+			return array();
 		}
 		foreach ($this->_bind_map as $arr) {
 			$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
