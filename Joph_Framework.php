@@ -15,6 +15,7 @@ class Joph_Framework {
 class Joph {
 	protected $_tag_map = array();
 	protected $_bind_map = array();
+	protected $_bind_static = array();
 	protected $_schema_map = array(
 		'<id>'          => '(?P<id>\d+)',
 		'<name>'        => '(?P<name>\w+)',
@@ -231,10 +232,16 @@ class Joph {
 		if ('/' !== substr($pattern_str, 0, 1)) {
 			throw new Joph_Exception('pattern should starts with slash');
 		}
-		$uri = $this->parseUriPattern($pattern_str);
-		$act = $this->parseActionChain($action_chain);
-		$map = array_merge((array)$uri, (array)$act);
-		$this->_bind_map[] = $map;
+		if (strpos($pattern_str, '<') < strpos($pattern_str, '>')) {
+			$uri = $this->parseUriPattern($pattern_str);
+			$act = $this->parseActionChain($action_chain);
+			$map = array_merge((array)$uri, (array)$act);
+			$this->_bind_map[] = $map;
+		} else {
+			$uri = rtrim($pattern_str, '/');
+			$map = $this->parseActionChain($action_chain);
+			$this->_bind_static[$uri] = $map;
+		}
 	}
 	
 	public function shipout() {
@@ -243,16 +250,27 @@ class Joph {
 		$_SERVER['REQUEST_PATH'] = (false === $query_pos) ? 
 			$_SERVER['REQUEST_URI'] : substr($_SERVER['REQUEST_URI'], 0, $query_pos);
 		$_SERVER['REQUEST_PATH'] = rtrim($_SERVER['REQUEST_PATH'], '/');
-		foreach ($this->_bind_map as $arr) {
-			$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
-			if (preg_match($regexp, $_SERVER['REQUEST_PATH'], $schema)) {
-				$orbit = true;
-				Joph_Controller::parseClientRequest($schema);
-				Joph_Controller::setActions($arr['action']);
-				do {
-					Joph_Controller::runAction();
-				} while (Joph_Controller::hasUnexecutedAction());
-				break;
+		if (isset($this->_bind_static[$_SERVER['REQUEST_PATH']])) {
+			$orbit = true;
+			$schema = array();
+			$arr = $this->_bind_static[$_SERVER['REQUEST_PATH']];
+			Joph_Controller::parseClientRequest($schema);
+			Joph_Controller::setActions($arr['action']);
+			do {
+				Joph_Controller::runAction();
+			} while (Joph_Controller::hasUnexecutedAction());
+		} else {
+			foreach ($this->_bind_map as $arr) {
+				$regexp = '#^' . rtrim($arr['regexp'], '/') . '$#';
+				if (preg_match($regexp, $_SERVER['REQUEST_PATH'], $schema)) {
+					$orbit = true;
+					Joph_Controller::parseClientRequest($schema);
+					Joph_Controller::setActions($arr['action']);
+					do {
+						Joph_Controller::runAction();
+					} while (Joph_Controller::hasUnexecutedAction());
+					break;
+				}
 			}
 		}
 		
