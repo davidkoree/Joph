@@ -423,7 +423,8 @@ class Joph_Controller {
 			$action->execute();
 			Joph_Controller::setActionIndex(++$idx);
 			$action->onFinished();
-		} elseif ($sub_action instanceof Joph_Action_Internal) {
+		} elseif (is_string($sub_action) && is_subclass_of($sub_action, 'Joph_Action_Internal')) {
+			$sub_action = new $sub_action(); // initialize internal action
 			$sub_action->execute();
 			Joph_Controller::setActionIndex(++$idx);
 		} else {

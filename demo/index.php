@@ -6,7 +6,7 @@ define('ACTION_PATH', dirname(__FILE__));
 //TODO use spl_autoload_register instead
 //TODO Joph_Config as main dynamic smart wrapper
 
-require_once 'Joph_Framework.php';
+require_once '../Joph_Framework.php';
 
 try {
 	$joph = Joph_Framework::getInstance();
