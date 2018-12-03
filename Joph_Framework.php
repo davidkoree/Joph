@@ -5,14 +5,12 @@ class Joph_Framework {
 	private function __construct() {}
 	
 	public static function getInstance() {
-		if (!(self::$joph instanceof Joph)) {
-			self::$joph = new Joph();
+		if (!(self::$joph instanceof Joph_Framework)) {
+			self::$joph = new Joph_Framework();
 		}
 		return self::$joph;
 	}
-}
 
-class Joph {
 	protected $_tag_map = array();
 	protected $_bind_map = array();
 	protected $_bind_static = array();
