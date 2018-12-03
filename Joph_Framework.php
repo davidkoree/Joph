@@ -586,7 +586,7 @@ class Joph_Config {
 
 	public function setAutoload($pathes = array()) {
 		foreach ($pathes as $prefix => $path) {
-			$prefix = ucfirst(strtolower($prefix));
+			$prefix = ucfirst($prefix);
 			$this->__reserved[$prefix] = $path;
 		}
 	}
